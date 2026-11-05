@@ -1,0 +1,52 @@
+server:
+  port: ${PORT:8083}
+
+spring:
+  application:
+    name: ms-pedidos360-rabbit-admin
+
+  # Conexión AMQP al clúster (crear/eliminar recursos y publicar mensajes de prueba).
+  rabbitmq:
+    addresses: ${RABBITMQ_ADDRESSES:localhost:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    connection-timeout: 3s
+    publisher-confirm-type: correlated   # se espera la confirmación del broker al publicar
+    publisher-returns: true              # y se informa si el mensaje no llegó a ninguna cola
+    template:
+      mandatory: true
+
+pedidos360:
+  rabbit-admin:
+    # API HTTP de administración (listar colas, exchanges y bindings). Una URL por nodo, separadas por coma.
+    management:
+      urls: ${RABBITMQ_MANAGEMENT_URLS:http://localhost:15672}
+      username: ${RABBITMQ_USERNAME:guest}
+      password: ${RABBITMQ_PASSWORD:guest}
+      virtual-host: /
+    # Las colas creadas con DLQ envían sus rechazos a esta DLX, hacia <cola>.dlq
+    dead-letter:
+      exchange: pedidos360.dlx
+      suffix: .dlq
+    confirm-timeout: 5s
+    # Mensajería del sistema: la API no permite eliminar estos recursos (ni los bindings de estas colas).
+    protected-names:
+      - pedidos360.eventos
+      - pedidos360.documentos
+      - pedidos360.dlx
+      - pedidos360.notificaciones.pedido
+      - pedidos360.notificaciones.pedido.retry
+      - pedidos360.notificaciones.pedido.dlq
+      - pedidos360.documentos.generar
+      - pedidos360.documentos.generar.retry
+      - pedidos360.documentos.generar.dlq
+      - pedidos360.inventario.stock-bajo
+      - pedidos360.inventario.stock-bajo.retry
+      - pedidos360.inventario.stock-bajo.dlq
+      - pedidos360.no-entregados.dlq
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
